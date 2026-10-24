@@ -19,7 +19,7 @@ def criar_db():
 
     if not documentos:
         print(f"Nenhum PDF com texto encontrado em '{PASTA_BASE}'.")
-        return
+        return {"documentos": 0, "chunks": 0}
 
     # Dividir os documentos em pedaços de texto (chunks)
     chunks = dividir_chunks(documentos)
@@ -28,6 +28,8 @@ def criar_db():
 
     # Vetorizar os chunks e criar o banco vetorial
     vetorizar_chunks(chunks)
+
+    return {"documentos": len(documentos), "chunks": len(chunks)}
 
 
 def carregar_documentos():

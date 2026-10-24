@@ -1,4 +1,4 @@
-"""Etapa online 3: geração com o LLM base + adaptador LoRA (se existir)."""
+import os
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -8,6 +8,10 @@ from config import ADAPTADOR_LORA, MAX_NOVOS_TOKENS, MODELO_LLM, TEMPERATURA
 class Gerador:
     def __init__(self, usar_lora: bool = True):
         tem_gpu = torch.cuda.is_available()
+
+        if not tem_gpu:
+            num_threads = int(os.getenv("TORCH_NUM_THREADS", "4"))
+            torch.set_num_threads(num_threads)
 
         self.tokenizer = AutoTokenizer.from_pretrained(MODELO_LLM)
         self.modelo = AutoModelForCausalLM.from_pretrained(

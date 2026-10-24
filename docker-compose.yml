@@ -1,0 +1,25 @@
+services:
+  rag-post:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag_post_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - TORCH_NUM_THREADS=4
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - ./base:/app/base
+      - ./db:/app/db
+      - ./data:/app/data
+      - ./adapters:/app/adapters
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/arquivos')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

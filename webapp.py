@@ -1,8 +1,10 @@
 
 import json
+import os
 from functools import lru_cache
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
@@ -10,6 +12,15 @@ from config import ARQUIVO_EXEMPLOS
 from upload import router as upload_router
 
 app = FastAPI(title="RAG Post Studio")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(upload_router)
 
 
@@ -95,6 +106,26 @@ def revisar(request: RevisaoRequest):
     )
 
     return {"message": "Exemplo salvo em exemplos.jsonl."}
+
+
+@app.post("/api/reindexar")
+def reindexar():
+    try:
+        from index import criar_db
+        from retriever import carregar_db
+
+        resultado = criar_db() or {}
+        carregar_db.cache_clear()
+        docs = resultado.get("documentos", 0)
+        chunks = resultado.get("chunks", 0)
+        return {
+            "message": f"Banco vetorial recriado com sucesso! ({docs} documentos, {chunks} chunks indexados)."
+        }
+    except Exception as erro:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Falha ao reindexar documentos: {erro}",
+        ) from erro
 
 
 HTML = r"""
@@ -219,6 +250,7 @@ main{padding:22px 13px}.panel{padding:16px}
     accept=".pdf,.txt,.md,.docx,.csv">
   <div class="actions">
     <button class="primary" id="btnUpload" onclick="enviar()">Enviar arquivos</button>
+    <button class="good" id="btnIndexar" onclick="reindexar()">⚙ Vetorizar Base (RAG)</button>
     <button class="secondary" onclick="listarArquivos()">Atualizar lista</button>
   </div>
   <div id="statusUpload" class="status" role="status"></div>
@@ -423,7 +455,32 @@ async function excluirArquivo(nome) {
       "Erro: " + e.message;
   }
 }
+
+async function reindexar() {
+  const botao = document.getElementById("btnIndexar");
+  const status = document.getElementById("statusUpload");
+  botao.disabled = true;
+  status.textContent = "Processando PDFs e recriando banco ChromaDB... Aguarde.";
+  try {
+    const res = await fetch("/api/reindexar", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw Error(data.detail || "Falha na vetorização.");
+    status.textContent = "✓ " + data.message;
+  } catch (e) {
+    status.textContent = "Erro ao vetorizar: " + e.message;
+  } finally {
+    botao.disabled = false;
+  }
+}
 </script>
 </body>
 </html>
 """
+
+if __name__ == "__main__":
+    import uvicorn
+
+    porta = int(os.getenv("PORT", "8000"))
+    host = os.getenv("HOST", "0.0.0.0")
+    uvicorn.run("webapp:app", host=host, port=porta, reload=False)
+

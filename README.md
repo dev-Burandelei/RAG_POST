@@ -30,3 +30,24 @@ Fluxo: PDFs -> chunks -> embeddings -> Chroma | tema -> busca top-k -> prompt ->
 Regras do jogo:
 - Trocou o modelo de embeddings ou o chunking: apague `db/` e rode `index.py`.
 - Mudou o `SYSTEM_PROMPT` em `prompt.py`: retreine o LoRA.
+
+## Deploy em Nuvem (Oracle Cloud Always Free / Docker)
+
+### Executando com Docker Compose localmente
+```bash
+docker compose up -d --build
+```
+Acesse a aplicação em `http://localhost:8000`.
+
+### Deploy Automatizado na VM Oracle Cloud (Ampere A1)
+1. Crie uma instância Ubuntu ARM (4 OCPUs, 24 GB RAM) na Oracle Cloud.
+2. Libere a porta `8000` nas Ingress Rules da VCN.
+3. Conecte via SSH e execute:
+```bash
+git clone <URL_DO_SEU_REPOSITORIO>
+cd RAG_POST
+chmod +x setup_oracle.sh
+./setup_oracle.sh
+```
+O script configura o firewall local, instala o Docker e inicia o container com persistência nos volumes `base/`, `db/`, `data/` e `adapters/`.
+
